@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASBL Order Request Form</title>
-    <!-- Include html2pdf.js library securely via CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --primary-color: #b5838d;
@@ -205,50 +203,63 @@
             background-color: var(--primary-hover);
         }
 
-        /* Clean formatting explicitly for PDF generation output */
-        .pdf-mode {
-            max-width: 100% !important;
-            padding: 10px !important;
-            box-shadow: none !important;
-            border: none !important;
-            background: #ffffff !important;
-        }
+        /* ==========================================
+           CRITICAL PRINT STYLING RULES (FOR PDF)
+           ========================================== */
+        @media print {
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            .form-container {
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+                background: transparent !important;
+            }
 
-        .pdf-value-snapshot {
-            display: block;
-            padding: 8px 0;
-            font-size: 11pt;
-            color: #111111;
-            font-weight: 500;
-            white-space: pre-wrap;
-            border-bottom: 1px dashed #d1c4c2;
-            margin-bottom: 5px;
-        }
-        
-        .pdf-selected-radio {
-            font-weight: dotted;
-            background-color: #fcf6f5;
-            padding: 6px 10px;
-            border-left: 3px solid var(--primary-color);
-            border-radius: 4px;
-            margin: 4px 0;
+            /* Hide the instruction panel and download buttons on the PDF */
+            .instructions, .actions, .hint {
+                display: none !important;
+            }
+
+            .form-group, .product-table, .examples-box {
+                page-break-inside: avoid !important; /* Forces sections to stay whole across pages */
+            }
+
+            /* Make sure input borders and typed text render perfectly crisp in black/white */
+            input[type="text"], input[type="email"], input[type="tel"], input[type="number"], textarea {
+                background-color: #ffffff !important;
+                border: 1px solid #999999 !important;
+                color: #000000 !important;
+                font-size: 11pt !important;
+            }
+
+            .product-table th {
+                background-color: #f2f2f2 !important;
+                border-bottom: 2px solid #666666 !important;
+            }
         }
     </style>
 </head>
 <body>
 
-<div class="form-container" id="pdf-content">
+<div class="form-container">
     <div class="header">
         <h1>A Lil' Something by Lo</h1>
         <h2>Order Request Form</h2>
         <div class="instructions">
-            Please complete this form and click "Save & Download PDF" at the bottom to save a completed copy to your computer. Then, email that PDF file to <a href="mailto:alilsomethingbylo@gmail.com">alilsomethingbylo@gmail.com</a> to submit your pre-order. We will review your choices and issue a detailed invoice shortly.
+            Please complete this form online. Once filled out, click the <strong>"Save & Download PDF"</strong> button at the bottom and choose <strong>"Save as PDF"</strong> in your browser options. Then, email that saved PDF file to <a href="mailto:alilsomethingbylo@gmail.com">alilsomethingbylo@gmail.com</a> to submit your pre-order!
         </div>
     </div>
 
-    <form id="orderForm" onsubmit="event.preventDefault(); downloadPDF();">
+    <form id="orderForm" onsubmit="event.preventDefault(); window.print();">
         
-        <!-- SECTION 1 -->
         <div class="section-title">1. Customer & Shipping Details</div>
         
         <div class="form-group">
@@ -272,7 +283,6 @@
             <input type="tel" id="phone" name="phone" required>
         </div>
 
-        <!-- SECTION 2 -->
         <div class="section-title">2. Product & Customization Details</div>
         
         <div class="form-group">
@@ -318,7 +328,6 @@
             <textarea id="customization" name="customization" rows="4" required></textarea>
         </div>
 
-        <!-- SECTION 3 -->
         <div class="section-title">3. Add-Ons & Final Details</div>
         
         <div class="form-group">
@@ -405,98 +414,11 @@
             Thank you for supporting my small business! We will review your request and get back to you shortly.
         </div>
 
-        <div class="actions" id="ignore-pdf-button">
+        <div class="actions">
             <button type="submit" class="btn">Save & Download PDF</button>
         </div>
     </form>
 </div>
-
-<script>
-function downloadPDF() {
-    const originalContainer = document.getElementById('pdf-content');
-    const actionButton = document.getElementById('ignore-pdf-button');
-    
-    // Hide original button so it doesn't process
-    actionButton.style.display = 'none';
-
-    // 1. Clone the entire form container so we don't destroy the active webpage user view
-    const clonedContainer = originalContainer.cloneNode(true);
-    clonedContainer.classList.add('pdf-mode');
-    
-    // Remove the submit action button wrapper from the clone entirely
-    const clonedButton = clonedContainer.querySelector('#ignore-pdf-button');
-    if (clonedButton) clonedButton.remove();
-
-    // 2. Loop through all inputs in the ORIGINAL element and replicate values into the CLONE as static text elements
-    // This entirely avoids the html2canvas input-box cutoff rendering bugs!
-    
-    // Text inputs and Textareas
-    const originalInputs = originalContainer.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], textarea');
-    const clonedInputs = clonedContainer.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], textarea');
-    
-    originalInputs.forEach((orig, index) => {
-        const value = orig.value.trim();
-        const textSpan = document.createElement('div');
-        textSpan.className = 'pdf-value-snapshot';
-        textSpan.textContent = value ? value : '—'; // display dash if left blank
-        clonedInputs[index].parentNode.replaceChild(textSpan, clonedInputs[index]);
-    });
-
-    // Number Quantity inputs (Tables)
-    const originalNumbers = originalContainer.querySelectorAll('input[type="number"]');
-    const clonedNumbers = clonedContainer.querySelectorAll('input[type="number"]');
-    originalNumbers.forEach((orig, index) => {
-        const val = orig.value || '0';
-        const textSpan = document.createElement('span');
-        textSpan.style.fontWeight = 'bold';
-        textSpan.style.fontSize = '11pt';
-        textSpan.textContent = val;
-        clonedNumbers[index].parentNode.replaceChild(textSpan, clonedNumbers[index]);
-    });
-
-    // Radio Option Sets
-    // Group options cleanly into what was explicitly selected
-    const radioGroups = ['design_preview', 'payment_method'];
-    radioGroups.forEach(groupName => {
-        const checkedRadio = originalContainer.querySelector(`input[name="${groupName}"]:checked`);
-        const clonedGroupContainer = clonedContainer.querySelector(`input[name="${groupName}"]`).closest('.form-group');
-        
-        // Wipe old interactive radio buttons from clone container
-        const optionsToClear = clonedGroupContainer.querySelectorAll('.radio-option');
-        optionsToClear.forEach(el => el.remove());
-
-        // Replace with simple clear selected text string
-        const choiceDiv = document.createElement('div');
-        choiceDiv.className = 'pdf-selected-radio';
-        choiceDiv.innerHTML = checkedRadio ? `<strong>Selected Option:</strong> ${checkedRadio.parentNode.textContent.trim()}` : '<em>No Option Selected</em>';
-        clonedGroupContainer.appendChild(choiceDiv);
-    });
-
-    // 3. Set up the document rules for the PDF compilation engine
-    const options = {
-        margin:       [15, 15, 15, 15], // Spacious 15mm page breaks padding frames
-        filename:     'ASBL_Order_Request_Form_Completed.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { 
-            scale: 2, 
-            useCORS: true,
-            logging: false,
-            letterRendering: true
-        },
-        pagebreak:    { mode: ['css', 'legacy'] }, // Smart clean section breaks
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
-    };
-
-    // 4. Feed the clean cloned text data directly to the generator
-    html2pdf().set(options).from(clonedContainer).save().then(() => {
-        // Bring back the button on the live page so they can click it again if needed
-        actionButton.style.display = 'block';
-    }).catch(err => {
-        console.error(err);
-        actionButton.style.display = 'block';
-    });
-}
-</script>
 
 </body>
 </html>
