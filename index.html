@@ -165,11 +165,7 @@
             margin-bottom: 4px;
         }
 
-        .radio-group, .checkbox-group {
-            margin-bottom: 10px;
-        }
-
-        .radio-option, .checkbox-option {
+        .radio-option {
             display: flex;
             align-items: center;
             margin-bottom: 8px;
@@ -177,7 +173,7 @@
             font-size: 10.5pt;
         }
 
-        .radio-option input, .checkbox-option input {
+        .radio-option input {
             margin-right: 10px;
             transform: scale(1.1);
             accent-color: var(--primary-color);
@@ -216,6 +212,7 @@
                 box-shadow: none;
                 border: none;
                 padding: 0;
+                max-width: 100%;
             }
             .actions {
                 display: none;
@@ -234,13 +231,12 @@
         <h1>A Lil' Something by Lo</h1>
         <h2>Order Request Form</h2>
         <div class="instructions">
-            Please complete this form and click "Save & Print Form" at the bottom to save a copy as a PDF or print it. Then, email the completed form to <a href="mailto:alilsomethingbylo@gmail.com">alilsomethingbylo@gmail.com</a> to submit your pre-order. We will review your choices and issue a detailed invoice shortly.
+            Please complete this form and click "Save & Download Form" at the bottom to save a completed copy to your computer. Then, email that downloaded file to <a href="mailto:alilsomethingbylo@gmail.com">alilsomethingbylo@gmail.com</a> to submit your pre-order. We will review your choices and issue a detailed invoice shortly.
         </div>
     </div>
 
-    <form id="orderForm" onsubmit="event.preventDefault(); window.print();">
+    <form id="orderForm" onsubmit="event.preventDefault(); downloadForm();">
         
-        <!-- SECTION 1 -->
         <div class="section-title">1. Customer & Shipping Details</div>
         
         <div class="form-group">
@@ -264,7 +260,6 @@
             <input type="tel" id="phone" name="phone" required>
         </div>
 
-        <!-- SECTION 2 -->
         <div class="section-title">2. Product & Customization Details</div>
         
         <div class="form-group">
@@ -310,7 +305,6 @@
             <textarea id="customization" name="customization" rows="4" required></textarea>
         </div>
 
-        <!-- SECTION 3 -->
         <div class="section-title">3. Add-Ons & Final Details</div>
         
         <div class="form-group">
@@ -398,10 +392,44 @@
         </div>
 
         <div class="actions">
-            <button type="submit" class="btn">Save & Print Form</button>
+            <button type="submit" class="btn">Save & Download Form</button>
         </div>
     </form>
 </div>
+
+<script>
+function downloadForm() {
+    // 1. Force the values of standard inputs, textareas, and numbers to write explicitly to the HTML structure
+    document.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="number"], textarea').forEach(input => {
+        input.setAttribute('value', input.value);
+        if (input.tagName.toLowerCase() === 'textarea') {
+            input.textContent = input.value;
+        }
+    });
+
+    // 2. Lock in the radio button selection states into the HTML code
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        if (radio.checked) {
+            radio.setAttribute('checked', 'checked');
+        } else {
+            radio.removeAttribute('checked');
+        }
+    });
+
+    // 3. Capture the full modified HTML string
+    const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    
+    // 4. Fire an invisible download link to push it to the computer
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'ASBL_Order_Request_Form_Completed.html';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
 
 </body>
 </html>
