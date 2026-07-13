@@ -90,6 +90,7 @@
 
         .form-group {
             margin-bottom: 18px;
+            page-break-inside: avoid; /* Prevents splitting an input/label across pages */
         }
 
         label {
@@ -135,6 +136,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 15px;
+            page-break-inside: avoid;
         }
 
         .product-table th, .product-table td {
@@ -161,6 +163,7 @@
             margin-bottom: 20px;
             color: #666;
             border-radius: 0 6px 6px 0;
+            page-break-inside: avoid;
         }
 
         .examples-box div {
@@ -173,6 +176,7 @@
             margin-bottom: 8px;
             cursor: pointer;
             font-size: 10.5pt;
+            page-break-inside: avoid;
         }
 
         .radio-option input {
@@ -203,6 +207,21 @@
 
         .btn:hover {
             background-color: var(--primary-hover);
+        }
+
+        /* Specific modifications only loaded during the PDF generation step */
+        .html2pdf-container {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: #ffffff !important;
+        }
+        .html2pdf-container input, 
+        .html2pdf-container textarea {
+            background-color: #ffffff !important;
+            border: 1px solid #ccc !important;
         }
     </style>
 </head>
@@ -376,7 +395,6 @@
             Thank you for supporting my small business! We will review your request and get back to you shortly.
         </div>
 
-        <!-- The submit action button is wrapper-controlled to exclude it from the final PDF output -->
         <div class="actions" id="ignore-pdf-button">
             <button type="submit" class="btn">Save & Download PDF</button>
         </div>
@@ -385,25 +403,38 @@
 
 <script>
 function downloadPDF() {
-    // Target the entire container
     const element = document.getElementById('pdf-content');
     const actionButton = document.getElementById('ignore-pdf-button');
     
-    // Temporarily hide the button row right before generating so it doesn't clutter the PDF
+    // Hide the action button during capture
     actionButton.style.display = 'none';
 
-    // Set configuration rules for the document renderer
+    // Apply PDF formatting style classes temporarily to prevent truncation
+    element.classList.add('html2pdf-container');
+
+    // Configuration designed to handle smooth multi-page smart pagination
     const options = {
-        margin:       [10, 10, 10, 10], // top, left, bottom, right margins in mm
+        margin:       [12, 12, 12, 12], // Clean 12mm frame margins
         filename:     'ASBL_Order_Request_Form_Completed.pdf',
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true }, // high scale means sharp text rendering
+        html2canvas:  { 
+            scale: 2, 
+            useCORS: true,
+            logging: false,
+            letterRendering: true
+        },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }, // Smart breaks rules
         jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
     };
 
-    // Execute conversion and force download directly to device
+    // Run the generator
     html2pdf().set(options).from(element).save().then(() => {
-        // Bring back the button row on the active webpage after the compilation finishes
+        // Strip out the custom container configuration rules and bring back the download button
+        element.classList.remove('html2pdf-container');
+        actionButton.style.display = 'block';
+    }).catch(err => {
+        console.error(err);
+        element.classList.remove('html2pdf-container');
         actionButton.style.display = 'block';
     });
 }
