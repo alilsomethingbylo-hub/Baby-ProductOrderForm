@@ -90,7 +90,6 @@
 
         .form-group {
             margin-bottom: 18px;
-            page-break-inside: avoid; /* Prevents splitting an input/label across pages */
         }
 
         label {
@@ -136,7 +135,6 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 15px;
-            page-break-inside: avoid;
         }
 
         .product-table th, .product-table td {
@@ -163,7 +161,6 @@
             margin-bottom: 20px;
             color: #666;
             border-radius: 0 6px 6px 0;
-            page-break-inside: avoid;
         }
 
         .examples-box div {
@@ -176,7 +173,6 @@
             margin-bottom: 8px;
             cursor: pointer;
             font-size: 10.5pt;
-            page-break-inside: avoid;
         }
 
         .radio-option input {
@@ -209,19 +205,33 @@
             background-color: var(--primary-hover);
         }
 
-        /* Specific modifications only loaded during the PDF generation step */
-        .html2pdf-container {
-            width: 100% !important;
+        /* Clean formatting explicitly for PDF generation output */
+        .pdf-mode {
             max-width: 100% !important;
-            padding: 0 !important;
+            padding: 10px !important;
             box-shadow: none !important;
             border: none !important;
             background: #ffffff !important;
         }
-        .html2pdf-container input, 
-        .html2pdf-container textarea {
-            background-color: #ffffff !important;
-            border: 1px solid #ccc !important;
+
+        .pdf-value-snapshot {
+            display: block;
+            padding: 8px 0;
+            font-size: 11pt;
+            color: #111111;
+            font-weight: 500;
+            white-space: pre-wrap;
+            border-bottom: 1px dashed #d1c4c2;
+            margin-bottom: 5px;
+        }
+        
+        .pdf-selected-radio {
+            font-weight: dotted;
+            background-color: #fcf6f5;
+            padding: 6px 10px;
+            border-left: 3px solid var(--primary-color);
+            border-radius: 4px;
+            margin: 4px 0;
         }
     </style>
 </head>
@@ -403,18 +413,68 @@
 
 <script>
 function downloadPDF() {
-    const element = document.getElementById('pdf-content');
+    const originalContainer = document.getElementById('pdf-content');
     const actionButton = document.getElementById('ignore-pdf-button');
     
-    // Hide the action button during capture
+    // Hide original button so it doesn't process
     actionButton.style.display = 'none';
 
-    // Apply PDF formatting style classes temporarily to prevent truncation
-    element.classList.add('html2pdf-container');
+    // 1. Clone the entire form container so we don't destroy the active webpage user view
+    const clonedContainer = originalContainer.cloneNode(true);
+    clonedContainer.classList.add('pdf-mode');
+    
+    // Remove the submit action button wrapper from the clone entirely
+    const clonedButton = clonedContainer.querySelector('#ignore-pdf-button');
+    if (clonedButton) clonedButton.remove();
 
-    // Configuration designed to handle smooth multi-page smart pagination
+    // 2. Loop through all inputs in the ORIGINAL element and replicate values into the CLONE as static text elements
+    // This entirely avoids the html2canvas input-box cutoff rendering bugs!
+    
+    // Text inputs and Textareas
+    const originalInputs = originalContainer.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], textarea');
+    const clonedInputs = clonedContainer.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], textarea');
+    
+    originalInputs.forEach((orig, index) => {
+        const value = orig.value.trim();
+        const textSpan = document.createElement('div');
+        textSpan.className = 'pdf-value-snapshot';
+        textSpan.textContent = value ? value : '—'; // display dash if left blank
+        clonedInputs[index].parentNode.replaceChild(textSpan, clonedInputs[index]);
+    });
+
+    // Number Quantity inputs (Tables)
+    const originalNumbers = originalContainer.querySelectorAll('input[type="number"]');
+    const clonedNumbers = clonedContainer.querySelectorAll('input[type="number"]');
+    originalNumbers.forEach((orig, index) => {
+        const val = orig.value || '0';
+        const textSpan = document.createElement('span');
+        textSpan.style.fontWeight = 'bold';
+        textSpan.style.fontSize = '11pt';
+        textSpan.textContent = val;
+        clonedNumbers[index].parentNode.replaceChild(textSpan, clonedNumbers[index]);
+    });
+
+    // Radio Option Sets
+    // Group options cleanly into what was explicitly selected
+    const radioGroups = ['design_preview', 'payment_method'];
+    radioGroups.forEach(groupName => {
+        const checkedRadio = originalContainer.querySelector(`input[name="${groupName}"]:checked`);
+        const clonedGroupContainer = clonedContainer.querySelector(`input[name="${groupName}"]`).closest('.form-group');
+        
+        // Wipe old interactive radio buttons from clone container
+        const optionsToClear = clonedGroupContainer.querySelectorAll('.radio-option');
+        optionsToClear.forEach(el => el.remove());
+
+        // Replace with simple clear selected text string
+        const choiceDiv = document.createElement('div');
+        choiceDiv.className = 'pdf-selected-radio';
+        choiceDiv.innerHTML = checkedRadio ? `<strong>Selected Option:</strong> ${checkedRadio.parentNode.textContent.trim()}` : '<em>No Option Selected</em>';
+        clonedGroupContainer.appendChild(choiceDiv);
+    });
+
+    // 3. Set up the document rules for the PDF compilation engine
     const options = {
-        margin:       [12, 12, 12, 12], // Clean 12mm frame margins
+        margin:       [15, 15, 15, 15], // Spacious 15mm page breaks padding frames
         filename:     'ASBL_Order_Request_Form_Completed.pdf',
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
@@ -423,18 +483,16 @@ function downloadPDF() {
             logging: false,
             letterRendering: true
         },
-        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }, // Smart breaks rules
+        pagebreak:    { mode: ['css', 'legacy'] }, // Smart clean section breaks
         jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
     };
 
-    // Run the generator
-    html2pdf().set(options).from(element).save().then(() => {
-        // Strip out the custom container configuration rules and bring back the download button
-        element.classList.remove('html2pdf-container');
+    // 4. Feed the clean cloned text data directly to the generator
+    html2pdf().set(options).from(clonedContainer).save().then(() => {
+        // Bring back the button on the live page so they can click it again if needed
         actionButton.style.display = 'block';
     }).catch(err => {
         console.error(err);
-        element.classList.remove('html2pdf-container');
         actionButton.style.display = 'block';
     });
 }
