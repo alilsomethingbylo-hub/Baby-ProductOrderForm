@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASBL Order Request Form</title>
+    <!-- Include html2pdf.js library securely via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --primary-color: #b5838d;
@@ -202,40 +204,20 @@
         .btn:hover {
             background-color: var(--primary-hover);
         }
-
-        @media print {
-            body {
-                background-color: #fff;
-                padding: 0;
-            }
-            .form-container {
-                box-shadow: none;
-                border: none;
-                padding: 0;
-                max-width: 100%;
-            }
-            .actions {
-                display: none;
-            }
-            input, textarea, select {
-                background-color: #fff !important;
-                border: 1px solid #ccc !important;
-            }
-        }
     </style>
 </head>
 <body>
 
-<div class="form-container">
+<div class="form-container" id="pdf-content">
     <div class="header">
         <h1>A Lil' Something by Lo</h1>
         <h2>Order Request Form</h2>
         <div class="instructions">
-            Please complete this form and click "Save & Download Form" at the bottom to save a completed copy to your computer. Then, email that downloaded file to <a href="mailto:alilsomethingbylo@gmail.com">alilsomethingbylo@gmail.com</a> to submit your pre-order. We will review your choices and issue a detailed invoice shortly.
+            Please complete this form and click "Save & Download PDF" at the bottom to save a completed copy to your computer. Then, email that PDF file to <a href="mailto:alilsomethingbylo@gmail.com">alilsomethingbylo@gmail.com</a> to submit your pre-order. We will review your choices and issue a detailed invoice shortly.
         </div>
     </div>
 
-    <form id="orderForm" onsubmit="event.preventDefault(); downloadForm();">
+    <form id="orderForm" onsubmit="event.preventDefault(); downloadPDF();">
         
         <!-- SECTION 1 -->
         <div class="section-title">1. Customer & Shipping Details</div>
@@ -394,39 +376,36 @@
             Thank you for supporting my small business! We will review your request and get back to you shortly.
         </div>
 
-        <div class="actions">
-            <button type="submit" class="btn">Save & Download Form</button>
+        <!-- The submit action button is wrapper-controlled to exclude it from the final PDF output -->
+        <div class="actions" id="ignore-pdf-button">
+            <button type="submit" class="btn">Save & Download PDF</button>
         </div>
     </form>
 </div>
 
 <script>
-function downloadForm() {
-    document.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="number"], textarea').forEach(input => {
-        input.setAttribute('value', input.value);
-        if (input.tagName.toLowerCase() === 'textarea') {
-            input.textContent = input.value;
-        }
-    });
-
-    document.querySelectorAll('input[type="radio"]').forEach(radio => {
-        if (radio.checked) {
-            radio.setAttribute('checked', 'checked');
-        } else {
-            radio.removeAttribute('checked');
-        }
-    });
-
-    const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
+function downloadPDF() {
+    // Target the entire container
+    const element = document.getElementById('pdf-content');
+    const actionButton = document.getElementById('ignore-pdf-button');
     
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'ASBL_Order_Request_Form_Completed.html';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Temporarily hide the button row right before generating so it doesn't clutter the PDF
+    actionButton.style.display = 'none';
+
+    // Set configuration rules for the document renderer
+    const options = {
+        margin:       [10, 10, 10, 10], // top, left, bottom, right margins in mm
+        filename:     'ASBL_Order_Request_Form_Completed.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true }, // high scale means sharp text rendering
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+    };
+
+    // Execute conversion and force download directly to device
+    html2pdf().set(options).from(element).save().then(() => {
+        // Bring back the button row on the active webpage after the compilation finishes
+        actionButton.style.display = 'block';
+    });
 }
 </script>
 
